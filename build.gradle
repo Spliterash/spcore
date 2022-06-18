@@ -13,7 +13,7 @@ allprojects {
     apply plugin: "io.spring.dependency-management"
 
     group = "ru.spliterash"
-    version = "1.0.0"
+    version = "1.0.0-SNAPSHOT"
 
     sourceCompatibility = "8"
 
@@ -48,8 +48,8 @@ allprojects {
                         url = "https://nexus.spliterash.ru/repository/spcore/"
 
                         credentials {
-                            username = System.getenv('SPLITERASH_NEXUS_USR')
-                            password = System.getenv('SPLITERASH_NEXUS_PSW')
+                            username = findProperty('SPLITERASH_NEXUS_USR')
+                            password = findProperty('SPLITERASH_NEXUS_PSW')
                         }
                     }
                 }
