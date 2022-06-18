@@ -1,0 +1,80 @@
+plugins {
+    id 'java-library'
+    id "io.freefair.lombok" version "6.4.3"
+    id 'maven-publish'
+    // Этот плагин не только для спринга, по сути это реализация dependencyManagement в gradle
+    id "io.spring.dependency-management" version "1.0.11.RELEASE"
+}
+
+allprojects {
+    apply plugin: "java-library"
+    apply plugin: "io.freefair.lombok"
+    apply plugin: 'maven-publish'
+    apply plugin: "io.spring.dependency-management"
+
+    group = "ru.spliterash"
+    version = "1.0.0"
+
+    sourceCompatibility = "8"
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+
+    java {
+        withSourcesJar()
+    }
+
+    def mavenArtifactId = ""
+    def lastProject = project
+
+    while (lastProject != null) {
+        def con = mavenArtifactId.isEmpty() ? "" : "-"
+        mavenArtifactId = lastProject.name + con + mavenArtifactId
+        lastProject = lastProject.parent
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+
+                artifactId = mavenArtifactId
+
+                repositories {
+                    maven {
+                        name = "nexus"
+                        url = "https://nexus.spliterash.ru/repository/spcore/"
+
+                        credentials {
+                            username = System.getenv('SPLITERASH_NEXUS_USR')
+                            password = System.getenv('SPLITERASH_NEXUS_PSW')
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+//noinspection GroovyImplicitNullArgumentCall
+configure(allprojects - project(":domain")) {
+    dependencyManagement {
+        imports {
+            mavenBom 'org.springframework.boot:spring-boot-dependencies:2.7.0'
+            mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2021.0.2'
+        }
+    }
+    dependencies {
+        compileOnly 'org.apache.logging.log4j:log4j-api'
+        api project(":domain")
+    }
+}
+
+// Главный модуль имеет в себе все суб модули
+subprojects.each { sub ->
+    dependencies {
+        api sub
+    }
+}

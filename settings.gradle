@@ -1,0 +1,6 @@
+rootProject.name = 'spcore'
+
+include(
+        "domain",
+        "database:mongo"
+)
