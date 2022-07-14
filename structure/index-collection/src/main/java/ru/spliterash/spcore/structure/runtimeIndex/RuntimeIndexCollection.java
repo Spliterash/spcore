@@ -23,12 +23,13 @@ public class RuntimeIndexCollection<T, E extends Enum<E>> implements Collection<
      * Ключ имя индекса
      * Значения - значения
      */
-    private final Map<E, RuntimeIndex<T>> indexes = new HashMap<>();
+    private final Map<E, RuntimeIndex<T>> indexes;
     private final Map<E, Map<Object, SPLinkedList<T>>> indexed;
     private final Map<T, List<SPLinkedList.LinkedListElement<T>>> toRemoveElements = new HashMap<>();
 
     public RuntimeIndexCollection(Supplier<Collection<T>> collectionCreate, Class<E> enumClass) {
         this.collection = collectionCreate.get();
+        this.indexes = new EnumMap<>(enumClass);
         this.indexed = new EnumMap<>(enumClass);
     }
 
