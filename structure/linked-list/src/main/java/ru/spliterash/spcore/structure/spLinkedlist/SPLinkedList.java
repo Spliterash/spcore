@@ -162,6 +162,8 @@ public class SPLinkedList<T> implements Iterable<T> {
         void remove();
 
         T get();
+
+        void set(T t);
     }
 
     private class Node implements LinkedListElement<T> {
@@ -195,6 +197,11 @@ public class SPLinkedList<T> implements Iterable<T> {
         @Override
         public T get() {
             return value;
+        }
+
+        @Override
+        public void set(T t) {
+            value = t;
         }
     }
 }
