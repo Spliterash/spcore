@@ -60,15 +60,28 @@ public class RuntimeIndexCollection<T, E extends Enum<E>> implements Collection<
         }
     }
 
-    public List<T> findByIndex(E type, Object value) {
+    private SPLinkedList<T> findByIndexLinked(E type, Object value) {
         Map<Object, SPLinkedList<T>> indexByField = indexed.getOrDefault(type, Collections.emptyMap());
 
-        SPLinkedList<T> list = indexByField.get(value);
+        return indexByField.get(value);
+    }
+
+    public List<T> findByIndex(E type, Object value) {
+        SPLinkedList<T> list = findByIndexLinked(type, value);
 
         if (list == null)
             return Collections.emptyList();
         else
             return StreamSupport.stream(list.spliterator(), false).collect(Collectors.toList());
+    }
+
+    public Optional<T> findByIndexFirst(E type, Object value) {
+        SPLinkedList<T> list = findByIndexLinked(type, value);
+
+        if (list == null || list.isEmpty())
+            return Optional.empty();
+
+        return list.first();
     }
 
     private void index(T element, E indexType, RuntimeIndex<T> index) {

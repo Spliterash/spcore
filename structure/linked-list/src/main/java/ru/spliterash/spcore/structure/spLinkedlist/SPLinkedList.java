@@ -4,6 +4,7 @@ package ru.spliterash.spcore.structure.spLinkedlist;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * LinkedList который оставляет callback после добавления, чтобы можно было легко удалить элемент
@@ -140,6 +141,14 @@ public class SPLinkedList<T> implements Iterable<T> {
                 return currentNode;
             }
         };
+    }
+
+    public Optional<T> first() {
+        return Optional.ofNullable(first).map(v -> v.value);
+    }
+
+    public Optional<T> last() {
+        return Optional.ofNullable(last).map(v -> v.value);
     }
 
     public interface LinkedListElement<T> {
