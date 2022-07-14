@@ -2,7 +2,7 @@ rootProject.name = 'spcore'
 
 include(
         "domain",
-        "database:mongo",
-        "structure:index-collection",
-        "structure:linked-list"
+        "spring:database:mongo",
+        "structures:index-collection",
+        "structures:linked-list"
 )

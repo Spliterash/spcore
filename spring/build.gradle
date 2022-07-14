@@ -1,0 +1,12 @@
+allprojects {
+    dependencyManagement {
+        imports {
+            mavenBom 'org.springframework.boot:spring-boot-dependencies:2.7.0'
+            mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2021.0.2'
+        }
+    }
+    dependencies {
+        compileOnly 'org.apache.logging.log4j:log4j-api'
+        api project(":domain")
+    }
+}
