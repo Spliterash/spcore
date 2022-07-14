@@ -16,31 +16,32 @@ import java.util.stream.StreamSupport;
  * @param <T>
  */
 @SuppressWarnings("unused")
-public class RuntimeIndexCollection<T> implements Collection<T> {
+public class RuntimeIndexCollection<T, E extends Enum<E>> implements Collection<T> {
     private final Collection<T> collection;
 
     /**
      * Ключ имя индекса
      * Значения - значения
      */
-    private final Map<String, RuntimeIndex<T>> indexes = new HashMap<>();
-    private final Map<String, Map<Object, SPLinkedList<T>>> indexed = new HashMap<>();
+    private final Map<E, RuntimeIndex<T>> indexes = new HashMap<>();
+    private final Map<E, Map<Object, SPLinkedList<T>>> indexed;
     private final Map<T, List<SPLinkedList.LinkedListElement<T>>> toRemoveElements = new HashMap<>();
 
-    public RuntimeIndexCollection(Supplier<Collection<T>> collectionCreate) {
+    public RuntimeIndexCollection(Supplier<Collection<T>> collectionCreate, Class<E> enumClass) {
         this.collection = collectionCreate.get();
+        this.indexed = new EnumMap<>(enumClass);
     }
 
-    public static <T> RuntimeIndexCollection<T> withArrayList() {
-        return new RuntimeIndexCollection<>(ArrayList::new);
+    public static <T, E extends Enum<E>> RuntimeIndexCollection<T, E> withArrayList(Class<E> enumClass) {
+        return new RuntimeIndexCollection<>(ArrayList::new, enumClass);
     }
 
-    public static <T> RuntimeIndexCollection<T> withLinkedList() {
-        return new RuntimeIndexCollection<>(LinkedList::new);
+    public static <T, E extends Enum<E>> RuntimeIndexCollection<T, E> withLinkedList(Class<E> enumClass) {
+        return new RuntimeIndexCollection<>(LinkedList::new, enumClass);
     }
 
-    public static <T> RuntimeIndexCollection<T> withHashSet() {
-        return new RuntimeIndexCollection<>(HashSet::new);
+    public static <T, E extends Enum<E>> RuntimeIndexCollection<T, E> withHashSet(Class<E> enumClass) {
+        return new RuntimeIndexCollection<>(HashSet::new, enumClass);
     }
 
     @Override
@@ -51,15 +52,15 @@ public class RuntimeIndexCollection<T> implements Collection<T> {
         toRemoveElements.clear();
     }
 
-    public void addIndex(String name, RuntimeIndex<T> index) {
-        indexes.put(name, index);
+    public void addIndex(E indexType, RuntimeIndex<T> index) {
+        indexes.put(indexType, index);
         for (T t : collection) {
-            index(t, name, index);
+            index(t, indexType, index);
         }
     }
 
-    public List<T> findByIndex(String name, Object value) {
-        Map<Object, SPLinkedList<T>> indexByField = indexed.getOrDefault(name, Collections.emptyMap());
+    public List<T> findByIndex(E type, Object value) {
+        Map<Object, SPLinkedList<T>> indexByField = indexed.getOrDefault(type, Collections.emptyMap());
 
         SPLinkedList<T> list = indexByField.get(value);
 
@@ -69,11 +70,11 @@ public class RuntimeIndexCollection<T> implements Collection<T> {
             return StreamSupport.stream(list.spliterator(), false).collect(Collectors.toList());
     }
 
-    private void index(T element, String name, RuntimeIndex<T> index) {
+    private void index(T element, E indexType, RuntimeIndex<T> index) {
         // Получаем значение поля по которому будет индексировать
         Object fieldValue = index.getField(element);
         // Получаем мапу для этого типа индекса по имени
-        Map<Object, SPLinkedList<T>> fieldMap = indexed.computeIfAbsent(name, s -> new HashMap<>());
+        Map<Object, SPLinkedList<T>> fieldMap = indexed.computeIfAbsent(indexType, s -> new HashMap<>());
         // Получаем список объедков с таким же значением поля и добавляем туда
         SPLinkedList<T> list = fieldMap.computeIfAbsent(fieldValue, o -> new SPLinkedList<>());
         SPLinkedList.LinkedListElement<T> add = list.add(element);
@@ -87,7 +88,7 @@ public class RuntimeIndexCollection<T> implements Collection<T> {
         boolean add = collection.add(t);
 
         if (add) {
-            for (Map.Entry<String, RuntimeIndex<T>> entry : indexes.entrySet()) {
+            for (Map.Entry<E, RuntimeIndex<T>> entry : indexes.entrySet()) {
                 index(t, entry.getKey(), entry.getValue());
             }
         }
