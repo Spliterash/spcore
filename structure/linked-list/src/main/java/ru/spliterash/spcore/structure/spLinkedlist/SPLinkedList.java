@@ -128,7 +128,10 @@ public class SPLinkedList<T> implements Iterable<T> {
 
             @Override
             public boolean hasNext() {
-                return currentNode.next != null;
+                if (currentNode == null && first != null)
+                    return true;
+                else
+                    return currentNode != null && currentNode.next != null;
             }
 
             @Override
@@ -136,8 +139,11 @@ public class SPLinkedList<T> implements Iterable<T> {
                 if (!hasNext())
                     throw new NoSuchElementException();
 
-                currentNode = currentNode.next;
-
+                if (currentNode == null) {
+                    currentNode = first;
+                } else {
+                    currentNode = currentNode.next;
+                }
                 return currentNode;
             }
         };
