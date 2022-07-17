@@ -39,13 +39,19 @@ allprojects {
         testImplementation "org.mockito:mockito-core:3.+"
     }
 
-    def mavenArtifactId = ""
+    def moduleName = ""
     def lastProject = project
 
     while (lastProject != null) {
-        def con = mavenArtifactId.isEmpty() ? "" : "-"
-        mavenArtifactId = lastProject.name + con + mavenArtifactId
+        def con = moduleName.isEmpty() ? "" : "-"
+        moduleName = lastProject.name + con + moduleName
         lastProject = lastProject.parent
+    }
+    // Фикс публиша
+    apply from: "https://gradle.spliterash.ru/maven-publish.gradle"
+
+    ext{
+        mavenArtifactId = moduleName
     }
 
     publishing {
@@ -53,9 +59,11 @@ allprojects {
             maven(MavenPublication) {
                 from components.java
 
-                artifactId = mavenArtifactId
-
                 repositories {
+                    maven {
+                        name = "folder"
+                        url = "file://" + rootProject.projectDir + "/repo"
+                    }
                     maven {
                         name = "nexus"
                         url = "https://nexus.spliterash.ru/repository/spcore/"
