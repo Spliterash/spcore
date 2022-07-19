@@ -60,10 +60,10 @@ allprojects {
                 from components.java
 
                 repositories {
-                    maven {
+/*                    maven {
                         name = "folder"
                         url = "file://" + rootProject.projectDir + "/repo"
-                    }
+                    }*/
                     maven {
                         name = "nexus"
                         url = "https://nexus.spliterash.ru/repository/spcore/"
