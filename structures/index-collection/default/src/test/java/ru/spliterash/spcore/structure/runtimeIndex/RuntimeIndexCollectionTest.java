@@ -2,7 +2,9 @@ package ru.spliterash.spcore.structure.runtimeIndex;
 
 import lombok.AllArgsConstructor;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import ru.spliterash.spcore.structure.runtimeIndex.defaultCollection.DefaultRuntimeIndexCollection;
 import ru.spliterash.spcore.structure.spLinkedlist.SPLinkedList;
 
 import java.lang.reflect.Field;
@@ -14,9 +16,10 @@ import static ru.spliterash.spcore.structure.runtimeIndex.RuntimeIndexCollection
 import static ru.spliterash.spcore.structure.runtimeIndex.RuntimeIndexCollectionTest.TestIndex.KEY_2;
 
 public class RuntimeIndexCollectionTest {
+
     @Test
     public void complexTest() throws NoSuchFieldException, IllegalAccessException {
-        RuntimeIndexCollection<Data, TestIndex> collection = RuntimeIndexCollection.withArrayList(TestIndex.class);
+        DefaultRuntimeIndexCollection<Data, TestIndex> collection = DefaultRuntimeIndexCollection.withArrayList(TestIndex.class);
 
         Field indexed = collection.getClass().getDeclaredField("indexed");
         indexed.setAccessible(true);
