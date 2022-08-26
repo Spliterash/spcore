@@ -1,8 +1,8 @@
 package ru.spliterash.spcore.structure.runtimeIndex;
 
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import ru.spliterash.spcore.structure.runtimeIndex.defaultCollection.DefaultRuntimeIndexCollection;
 import ru.spliterash.spcore.structure.spLinkedlist.SPLinkedList;
@@ -26,10 +26,6 @@ public class RuntimeIndexCollectionTest {
 
         //noinspection unchecked
         Map<String, Map<Object, SPLinkedList<Data>>> indexedValue = (Map<String, Map<Object, SPLinkedList<Data>>>) indexed.get(collection);
-
-
-        collection.addIndex(KEY_1, d -> d.key1);
-        collection.addIndex(KEY_2, d -> d.key2);
 
         Data data = new Data("1", "1");
 
@@ -63,8 +59,17 @@ public class RuntimeIndexCollectionTest {
         }
     }
 
-    enum TestIndex {
-        KEY_1, KEY_2
+    @RequiredArgsConstructor
+    enum TestIndex implements RuntimeIndex<Data> {
+        KEY_1(d -> d.key1),
+        KEY_2(d -> d.key2);
+
+        private final RuntimeIndex<Data> index;
+
+        @Override
+        public Object getField(Data data) {
+            return index.getField(data);
+        }
     }
 
     @AllArgsConstructor

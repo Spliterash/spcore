@@ -20,7 +20,7 @@ import java.util.*;
  * @param <T>
  * @param <E>
  */
-public class RedissonRuntimeIndexCollection<T, E extends Enum<E>> implements RuntimeIndexCollection<T, E> {
+public class RedissonRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T>> implements RuntimeIndexCollection<T, E> {
     private final RedissonClient client;
 
     /**
@@ -31,32 +31,19 @@ public class RedissonRuntimeIndexCollection<T, E extends Enum<E>> implements Run
      */
     @Getter
     private final RMap<Integer, T> elementsSet;
-    private final Map<E, RuntimeIndex<T>> indexMap;
     private final String startPath;
+    private final List<E> enums;
 
     /**
      * @param startPath Путь до значения, заканчивающийся на :
      * @param client    Клиент редиски
      */
     public RedissonRuntimeIndexCollection(Class<E> enumClass, String startPath, RedissonClient client) {
+        this.enums = Arrays.asList(enumClass.getEnumConstants());
         this.client = client;
         this.startPath = startPath;
 
         this.elementsSet = client.getMap(startPath + "map");
-        this.indexMap = new EnumMap<>(enumClass);
-    }
-
-    /**
-     * Все индексы должны быть добавлены ДО действий с коллекцией
-     * <p>
-     * Так же на всех серверах должны совпадать индексы
-     */
-    @Override
-    public void addIndex(E indexType, RuntimeIndex<T> index) {
-        if (!elementsSet.isEmpty())
-            throw new RuntimeException("No index add to not empty set");
-        // Все индексы должны быть добавлены ДО добавления элементов
-        indexMap.put(indexType, index);
     }
 
     /**
@@ -100,10 +87,10 @@ public class RedissonRuntimeIndexCollection<T, E extends Enum<E>> implements Run
         if (!elementsSet.fastPut(objHash, t))
             return false;
 
-        for (Map.Entry<E, RuntimeIndex<T>> entry : indexMap.entrySet()) {
-            RSetMultimap<Integer, Integer> elementIndexMap = getIndexMap(entry.getKey());
+        for (E index : enums) {
+            RSetMultimap<Integer, Integer> elementIndexMap = getIndexMap(index);
 
-            Object fieldValue = entry.getValue().getField(t);
+            Object fieldValue = index.getField(t);
             int fieldHash = fieldValue.hashCode();
 
             elementIndexMap.put(fieldHash, objHash);
@@ -118,10 +105,10 @@ public class RedissonRuntimeIndexCollection<T, E extends Enum<E>> implements Run
         if (elementsSet.fastRemove(o.hashCode()) == 0)
             return false;
 
-        for (Map.Entry<E, RuntimeIndex<T>> entry : indexMap.entrySet()) {
-            RSetMultimap<Integer, Integer> elementIndexMap = getIndexMap(entry.getKey());
+        for (E index : enums) {
+            RSetMultimap<Integer, Integer> elementIndexMap = getIndexMap(index);
 
-            Object field = entry.getValue().getField((T) o);
+            Object field = index.getField((T) o);
 
             int hashCode = field.hashCode();
 
@@ -134,7 +121,7 @@ public class RedissonRuntimeIndexCollection<T, E extends Enum<E>> implements Run
     @Override
     public void clear() {
         elementsSet.deleteAsync();
-        for (E e : indexMap.keySet()) {
+        for (E e : enums) {
             getIndexMap(e).delete();
         }
     }

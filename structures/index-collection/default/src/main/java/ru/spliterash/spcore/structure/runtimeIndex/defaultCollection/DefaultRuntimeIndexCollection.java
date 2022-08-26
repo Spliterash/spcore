@@ -18,32 +18,32 @@ import java.util.stream.StreamSupport;
  * @param <T>
  */
 @SuppressWarnings("unused")
-public class DefaultRuntimeIndexCollection<T, E extends Enum<E>> implements Collection<T>, RuntimeIndexCollection<T, E> {
+public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T>> implements Collection<T>, RuntimeIndexCollection<T, E> {
     private final Collection<T> collection;
 
     /**
      * Ключ имя индекса
      * Значения - значения
      */
-    private final Map<E, RuntimeIndex<T>> indexes;
     private final Map<E, Map<Object, SPLinkedList<T>>> indexed;
     private final Map<T, List<SPLinkedList.LinkedListElement<T>>> toRemoveElements = new HashMap<>();
+    private final List<E> enums;
 
     public DefaultRuntimeIndexCollection(Supplier<Collection<T>> collectionCreate, Class<E> enumClass) {
+        this.enums = Arrays.asList(enumClass.getEnumConstants());
         this.collection = collectionCreate.get();
-        this.indexes = new EnumMap<>(enumClass);
         this.indexed = new EnumMap<>(enumClass);
     }
 
-    public static <T, E extends Enum<E>> DefaultRuntimeIndexCollection<T, E> withArrayList(Class<E> enumClass) {
+    public static <T, E extends Enum<E> & RuntimeIndex<T>> DefaultRuntimeIndexCollection<T, E> withArrayList(Class<E> enumClass) {
         return new DefaultRuntimeIndexCollection<>(ArrayList::new, enumClass);
     }
 
-    public static <T, E extends Enum<E>> RuntimeIndexCollection<T, E> withLinkedList(Class<E> enumClass) {
+    public static <T, E extends Enum<E> & RuntimeIndex<T>> RuntimeIndexCollection<T, E> withLinkedList(Class<E> enumClass) {
         return new DefaultRuntimeIndexCollection<>(LinkedList::new, enumClass);
     }
 
-    public static <T, E extends Enum<E>> RuntimeIndexCollection<T, E> withHashSet(Class<E> enumClass) {
+    public static <T, E extends Enum<E> & RuntimeIndex<T>> RuntimeIndexCollection<T, E> withHashSet(Class<E> enumClass) {
         return new DefaultRuntimeIndexCollection<>(HashSet::new, enumClass);
     }
 
@@ -53,14 +53,6 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E>> implements Coll
 
         indexed.clear();
         toRemoveElements.clear();
-    }
-
-    @Override
-    public void addIndex(E indexType, RuntimeIndex<T> index) {
-        indexes.put(indexType, index);
-        for (T t : collection) {
-            index(t, indexType, index);
-        }
     }
 
     private SPLinkedList<T> findByIndexLinked(E type, Object value) {
@@ -89,11 +81,11 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E>> implements Coll
         return list.first();
     }
 
-    private void index(T element, E indexType, RuntimeIndex<T> index) {
+    private void index(T element, E index) {
         // Получаем значение поля по которому будет индексировать
         Object fieldValue = index.getField(element);
         // Получаем мапу для этого типа индекса по имени
-        Map<Object, SPLinkedList<T>> fieldMap = indexed.computeIfAbsent(indexType, s -> new HashMap<>());
+        Map<Object, SPLinkedList<T>> fieldMap = indexed.computeIfAbsent(index, s -> new HashMap<>());
         // Получаем список объедков с таким же значением поля и добавляем туда
         SPLinkedList<T> list = fieldMap.computeIfAbsent(fieldValue, o -> new SPLinkedList<>());
         SPLinkedList.LinkedListElement<T> add = list.add(element);
@@ -107,8 +99,8 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E>> implements Coll
         boolean add = collection.add(t);
 
         if (add) {
-            for (Map.Entry<E, RuntimeIndex<T>> entry : indexes.entrySet()) {
-                index(t, entry.getKey(), entry.getValue());
+            for (E entry : enums) {
+                index(t, entry);
             }
         }
 

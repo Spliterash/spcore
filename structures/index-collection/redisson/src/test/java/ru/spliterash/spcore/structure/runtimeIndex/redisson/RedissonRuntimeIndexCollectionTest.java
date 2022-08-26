@@ -3,6 +3,7 @@ package ru.spliterash.spcore.structure.runtimeIndex.redisson;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,6 +12,7 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import redis.embedded.RedisServer;
+import ru.spliterash.spcore.structure.runtimeIndex.RuntimeIndex;
 import ru.spliterash.spcore.structure.runtimeIndex.RuntimeIndexCollection;
 
 import java.io.Serializable;
@@ -45,10 +47,6 @@ public class RedissonRuntimeIndexCollectionTest {
     public void complexTest() {
         RuntimeIndexCollection<Data, TestIndex> collection = new RedissonRuntimeIndexCollection<>(TestIndex.class, "path:", client);
 
-
-        collection.addIndex(TestIndex.KEY_1, d -> d.key1);
-        collection.addIndex(KEY_2, d -> d.key2);
-
         Data data = new Data("1", "1");
 
         collection.add(data);
@@ -76,8 +74,16 @@ public class RedissonRuntimeIndexCollectionTest {
         }
     }
 
-    enum TestIndex {
-        KEY_1, KEY_2
+    @RequiredArgsConstructor
+    enum TestIndex implements RuntimeIndex<Data> {
+        KEY_1(d -> d.key1),
+        KEY_2(d -> d.key2);
+        private final RuntimeIndex<Data> index;
+
+        @Override
+        public Object getField(Data data) {
+            return index.getField(data);
+        }
     }
 
     @Getter
