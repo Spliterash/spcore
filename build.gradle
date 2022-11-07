@@ -2,18 +2,13 @@ plugins {
     id 'java-library'
     id "io.freefair.lombok" version "6.4.3"
     id 'maven-publish'
-    // Этот плагин не только для спринга, по сути это реализация dependencyManagement в gradle
-    id "io.spring.dependency-management" version "1.0.11.RELEASE"
 }
-
 allprojects {
     apply plugin: "java-library"
     apply plugin: "io.freefair.lombok"
     apply plugin: 'maven-publish'
-    apply plugin: "io.spring.dependency-management"
 
-    group = "ru.spliterash"
-    version = "1.0.1"
+    version = "1.0.2"
 
     compileJava {
         sourceCompatibility = '1.8'
@@ -34,6 +29,9 @@ allprojects {
     }
 
     dependencies {
+        compileOnly("org.jetbrains:annotations:23.0.0")
+
+
         testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
         testImplementation "org.mockito:mockito-core:3.+"
@@ -47,32 +45,29 @@ allprojects {
         moduleName = lastProject.name + con + moduleName
         lastProject = lastProject.parent
     }
-    // Фикс публиша
-    apply from: "https://gradle.spliterash.ru/maven-publish.gradle"
-
-    ext{
-        mavenArtifactId = moduleName
-    }
 
     publishing {
         publications {
             maven(MavenPublication) {
                 from components.java
 
-                repositories {
+                artifactId = moduleName
+                groupId = "ru.spliterash"
+            }
+        }
+        repositories {
 /*                    maven {
                         name = "folder"
                         url = "file://" + rootProject.projectDir + "/repo"
                     }*/
-                    maven {
-                        name = "nexus"
-                        url = "https://nexus.spliterash.ru/repository/spcore/"
+            maven {
+                name = "nexus"
+                url = "https://nexus.spliterash.ru/repository/spcore/"
 
-                        credentials {
-                            username = findProperty('SPLITERASH_NEXUS_USR')
-                            password = findProperty('SPLITERASH_NEXUS_PSW')
-                        }
-                    }
+
+                credentials {
+                    username = findProperty('SPLITERASH_NEXUS_USR')
+                    password = findProperty('SPLITERASH_NEXUS_PSW')
                 }
             }
         }
