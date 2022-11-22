@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 /**
  * Анноташка, указывающая, что тип данных для этого поля должен быть такой же, как у ID
  */
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IdField {
 }
