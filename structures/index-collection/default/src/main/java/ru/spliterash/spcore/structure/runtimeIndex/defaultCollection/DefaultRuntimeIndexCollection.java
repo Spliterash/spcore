@@ -6,7 +6,6 @@ import ru.spliterash.spcore.structure.runtimeIndex.RuntimeIndexCollection;
 import ru.spliterash.spcore.structure.spLinkedlist.SPLinkedList;
 
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -18,45 +17,32 @@ import java.util.stream.StreamSupport;
  * @param <T>
  */
 @SuppressWarnings("unused")
-public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T>> implements Collection<T>, RuntimeIndexCollection<T, E> {
-    private final Collection<T> collection;
-
+public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T>> implements RuntimeIndexCollection<T, E> {
     /**
      * Ключ имя индекса
      * Значения - значения
      */
-    private final Map<E, Map<Object, SPLinkedList<T>>> indexed;
-    private final Map<T, List<SPLinkedList.LinkedListElement<T>>> toRemoveElements = new HashMap<>();
+    private final Map<E, Map<Object, SPLinkedList<T>>> fieldIndex;
+    /**
+     * Индекс для индексов
+     */
+    private final Map<T, List<IndexedValue>> indexIndex = new HashMap<>();
     private final List<E> enums;
 
-    public DefaultRuntimeIndexCollection(Supplier<Collection<T>> collectionCreate, Class<E> enumClass) {
+    public DefaultRuntimeIndexCollection(Class<E> enumClass) {
         this.enums = Arrays.asList(enumClass.getEnumConstants());
-        this.collection = collectionCreate.get();
-        this.indexed = new EnumMap<>(enumClass);
+        this.fieldIndex = new EnumMap<>(enumClass);
     }
 
-    public static <T, E extends Enum<E> & RuntimeIndex<T>> DefaultRuntimeIndexCollection<T, E> withArrayList(Class<E> enumClass) {
-        return new DefaultRuntimeIndexCollection<>(ArrayList::new, enumClass);
-    }
-
-    public static <T, E extends Enum<E> & RuntimeIndex<T>> RuntimeIndexCollection<T, E> withLinkedList(Class<E> enumClass) {
-        return new DefaultRuntimeIndexCollection<>(LinkedList::new, enumClass);
-    }
-
-    public static <T, E extends Enum<E> & RuntimeIndex<T>> RuntimeIndexCollection<T, E> withHashSet(Class<E> enumClass) {
-        return new DefaultRuntimeIndexCollection<>(HashSet::new, enumClass);
-    }
 
     @Override
     public void clear() {
-        collection.clear();
-
-        indexed.clear();
-        toRemoveElements.clear();
+        fieldIndex.clear();
+        indexIndex.clear();
     }
 
     private SPLinkedList<T> findByIndexLinked(E type, Object value) {
-        Map<Object, SPLinkedList<T>> indexByField = indexed.getOrDefault(type, Collections.emptyMap());
+        Map<Object, SPLinkedList<T>> indexByField = fieldIndex.getOrDefault(type, Collections.emptyMap());
 
         return indexByField.get(value);
     }
@@ -81,43 +67,62 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
         return list.first();
     }
 
+    @Override
+    public void reindexField(T object, E index) {
+        List<IndexedValue> indexedFields = indexIndex.get(object);
+        // Сначала удалим
+        for (IndexedValue indexedField : indexedFields) {
+            if (indexedField.index == index) {
+                removeIndexedValue(indexedField);
+                break;
+            }
+        }
+        // Добавим по новой
+        index(object, index);
+    }
+
     private void index(T element, E index) {
         // Получаем значение поля по которому будет индексировать
         Object fieldValue = index.getField(element);
         // Получаем мапу для этого типа индекса по имени
-        Map<Object, SPLinkedList<T>> fieldMap = indexed.computeIfAbsent(index, s -> new HashMap<>());
+        Map<Object, SPLinkedList<T>> fieldMap = fieldIndex.computeIfAbsent(index, s -> new HashMap<>());
         // Получаем список объедков с таким же значением поля и добавляем туда
         SPLinkedList<T> list = fieldMap.computeIfAbsent(fieldValue, o -> new SPLinkedList<>());
         SPLinkedList.LinkedListElement<T> add = list.add(element);
         // Добавляем в массив чтобы чистить удаляемые элементы
-        List<SPLinkedList.LinkedListElement<T>> toRemoveList = toRemoveElements.computeIfAbsent(element, o -> new ArrayList<>());
-        toRemoveList.add(add);
+        List<IndexedValue> toRemoveList = indexIndex.computeIfAbsent(element, o -> new ArrayList<>());
+        IndexedValue value = new IndexedValue(fieldValue, index, fieldMap, list, add);
+
+        toRemoveList.add(value);
     }
 
     @Override
-    public boolean add(T t) {
-        boolean add = collection.add(t);
-
-        if (add) {
-            for (E entry : enums) {
-                index(t, entry);
-            }
+    public void add(T t) {
+        for (E entry : enums) {
+            index(t, entry);
         }
-
-        return add;
     }
 
     private void removeIndexes(Object obj) {
-        List<SPLinkedList.LinkedListElement<T>> linkedListElements = toRemoveElements.remove(obj);
+        //noinspection SuspiciousMethodCalls
+        List<IndexedValue> indexedValues = indexIndex.remove(obj);
 
-        if (linkedListElements != null)
-            for (SPLinkedList.LinkedListElement<T> linkedListElement : linkedListElements) {
-                linkedListElement.remove();
+        if (indexedValues != null) {
+            for (IndexedValue value : indexedValues) {
+                removeIndexedValue(value);
             }
+        }
+    }
+
+    private void removeIndexedValue(IndexedValue value) {
+        value.node.remove();
+        if (value.sameValueList.isEmpty()) {
+            value.indexMap.remove(value.value);
+        }
     }
 
     private void checkEmptyLists() {
-        for (Iterator<Map<Object, SPLinkedList<T>>> iter = indexed.values().iterator(); iter.hasNext(); ) {
+        for (Iterator<Map<Object, SPLinkedList<T>>> iter = fieldIndex.values().iterator(); iter.hasNext(); ) {
             Map<Object, SPLinkedList<T>> map = iter.next();
 
             map.values().removeIf(SPLinkedList::isEmpty);
@@ -128,85 +133,53 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
     }
 
     @Override
-    public boolean remove(Object o) {
-        boolean remove = collection.remove(o);
-
-        if (remove) {
-            removeIndexes(o);
-            checkEmptyLists();
-        }
-
-        return remove;
+    public void remove(Object o) {
+        removeIndexes(o);
+        checkEmptyLists();
     }
 
     // Прокся
     @Override
     public int size() {
-        return collection.size();
+        return indexIndex.size();
+    }
+
+    @Override
+    public Collection<T> toCollection() {
+        return indexIndex.keySet();
     }
 
     @Override
     public boolean isEmpty() {
-        return collection.isEmpty();
+        return indexIndex.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
-        return collection.contains(o);
+        return indexIndex.containsKey(o);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return collection.iterator();
-    }
-
-    @Override
-    public Object[] toArray() {
-        return collection.toArray();
-    }
-
-    @Override
-    public <T1> T1[] toArray(T1[] a) {
-        return collection.toArray(a);
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        return collection.containsAll(c);
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends T> c) {
-        boolean onlyOne = false;
-        for (T t : c) {
-            onlyOne = add(t) || onlyOne;
-        }
-
-        return onlyOne;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        boolean result = collection.removeAll(c);
-
-        if (result) {
-            for (Object o : c) {
-                removeIndexes(o);
-            }
-            checkEmptyLists();
-        }
-
-        return result;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        return collection.retainAll(c);
+        return indexIndex.keySet().iterator();
     }
 
     @AllArgsConstructor
     private static class ObjectIndexes<T> {
         private final String indexName;
         private final RuntimeIndex<T> getter;
+    }
+
+    @AllArgsConstructor
+    private class IndexedValue {
+        private final Object value;
+        private final E index;
+
+        private final Map<Object, SPLinkedList<T>> indexMap;
+        /**
+         * Этот элемент лежит в мапе сверху
+         */
+        private final SPLinkedList<T> sameValueList;
+        private final SPLinkedList.LinkedListElement<T> node;
     }
 }

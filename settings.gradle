@@ -4,6 +4,5 @@ include(
         "domain",
         "spring:database:mongo",
         "structures:index-collection:default",
-        "structures:index-collection:redisson",
         "structures:linked-list"
 )

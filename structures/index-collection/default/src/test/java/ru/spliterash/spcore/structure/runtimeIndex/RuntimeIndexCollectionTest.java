@@ -19,38 +19,38 @@ public class RuntimeIndexCollectionTest {
 
     @Test
     public void complexTest() throws NoSuchFieldException, IllegalAccessException {
-        DefaultRuntimeIndexCollection<Data, TestIndex> collection = DefaultRuntimeIndexCollection.withArrayList(TestIndex.class);
+        DefaultRuntimeIndexCollection<Data, TestIndex> indexCollection = new DefaultRuntimeIndexCollection<>(TestIndex.class);
 
-        Field indexed = collection.getClass().getDeclaredField("indexed");
+        Field indexed = indexCollection.getClass().getDeclaredField("fieldIndex");
         indexed.setAccessible(true);
 
         //noinspection unchecked
-        Map<String, Map<Object, SPLinkedList<Data>>> indexedValue = (Map<String, Map<Object, SPLinkedList<Data>>>) indexed.get(collection);
+        Map<String, Map<Object, SPLinkedList<Data>>> indexedValue = (Map<String, Map<Object, SPLinkedList<Data>>>) indexed.get(indexCollection);
 
         Data data = new Data("1", "1");
 
-        collection.add(data);
-        collection.add(new Data("1", "2"));
-        collection.add(new Data("2", "2"));
+        indexCollection.add(data);
+        indexCollection.add(new Data("1", "2"));
+        indexCollection.add(new Data("2", "2"));
 
-        Assertions.assertEquals(3, collection.size());
+        Assertions.assertEquals(3, indexCollection.size());
 
-        List<Data> key1Search = collection.findByIndex(KEY_1, "1");
+        List<Data> key1Search = indexCollection.findByIndex(KEY_1, "1");
         Assertions.assertEquals(2, key1Search.size());
 
-        List<Data> key2Search = collection.findByIndex(KEY_2, "1");
+        List<Data> key2Search = indexCollection.findByIndex(KEY_2, "1");
         Assertions.assertEquals(1, key2Search.size());
 
-        collection.remove(data);
+        indexCollection.remove(data);
 
-        key2Search = collection.findByIndex(KEY_2, "1");
+        key2Search = indexCollection.findByIndex(KEY_2, "1");
         Assertions.assertEquals(0, key2Search.size());
 
 
-        ArrayList<Data> copy = new ArrayList<>(collection);
+        ArrayList<Data> copy = new ArrayList<>(indexCollection.toCollection());
 
         for (Data data1 : copy) {
-            collection.remove(data1);
+            indexCollection.remove(data1);
         }
 
         Assertions.assertEquals(0, indexedValue.size());
