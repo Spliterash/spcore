@@ -9,6 +9,7 @@ interface BlockingCrudRepository<E : BaseEntity?, F : SearchFilters?> {
      fun save(e: E): E
      fun delete(id: String): Boolean
      fun findById(id: String): E?
+     fun findByIds(ids: Collection<String>): List<E>
      fun search(pagination: Pagination?, filters: F?): SearchResult<E>
      fun exist(id: String): Boolean
 }

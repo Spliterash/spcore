@@ -35,6 +35,11 @@ abstract class AbstractMongoRepository<E : BaseEntity, F : SearchFilters>(
             .awaitSingle()
 
     override suspend fun findById(id: String): E? = mongoTemplate.findById(id, documentClass).awaitSingleOrNull()
+    override suspend fun findByIds(ids: Collection<String>): List<E> =
+        mongoTemplate
+            .find(wrap(Criteria.where("_id").`in`(ids)), documentClass)
+            .collectList()
+            .awaitSingle()
 
     override suspend fun search(pagination: Pagination?, filters: F?): SearchResult<E> {
         return search(pagination, getSearchQuery(filters))

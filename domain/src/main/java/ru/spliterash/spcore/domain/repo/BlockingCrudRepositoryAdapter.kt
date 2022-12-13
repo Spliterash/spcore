@@ -21,6 +21,10 @@ open class BlockingCrudRepositoryAdapter<E : BaseEntity, F : SearchFilters>(
         repository.findById(id)
     }
 
+    override fun findByIds(ids: Collection<String>): List<E> = runBlocking {
+        repository.findByIds(ids)
+    }
+
     override fun exist(id: String): Boolean = runBlocking {
         repository.exist(id)
     }

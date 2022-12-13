@@ -36,7 +36,7 @@ abstract class AbstractMappingMongoRepository<D : BaseDocument, E : BaseEntity, 
             .awaitSingle()
 
     override suspend fun delete(id: String): Boolean =
-        mongoTemplate.remove(wrap(Criteria.where("_id").`is`(id)), documentClass)
+        mongoTemplate.remove(idQuery(id), documentClass)
             .map { it.deletedCount > 0 }
             .awaitSingle()
 
@@ -44,12 +44,19 @@ abstract class AbstractMappingMongoRepository<D : BaseDocument, E : BaseEntity, 
         mongoTemplate.findById(id, documentClass)
             .awaitSingleOrNull()?.let { mapper.map(it) }
 
+    override suspend fun findByIds(ids: Collection<String>): List<E> =
+        mongoTemplate
+            .find(wrap(Criteria.where("_id").`in`(ids)), documentClass)
+            .collectList()
+            .awaitSingle()
+            .map(mapper::map)
+
     override suspend fun search(pagination: Pagination?, filters: F?): SearchResult<E> {
         return search(pagination, getSearchQuery(filters))
     }
 
     override suspend fun exist(id: String): Boolean {
-        return mongoTemplate.exists(wrap(Criteria.where("_id").`is`(id)), documentClass).awaitSingle()
+        return mongoTemplate.exists(idQuery(id), documentClass).awaitSingle()
     }
 
     protected suspend fun search(pagination: Pagination?, searchQuery: DefaultSearchQuery<*>): SearchResult<E> {
@@ -81,4 +88,6 @@ abstract class AbstractMappingMongoRepository<D : BaseDocument, E : BaseEntity, 
     protected fun wrap(criteria: Criteria): Query {
         return Query(criteria)
     }
+
+    protected fun idQuery(id: String) = wrap(Criteria.where("_id").`is`(id))
 }

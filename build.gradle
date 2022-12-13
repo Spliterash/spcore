@@ -13,7 +13,7 @@ allprojects {
     apply plugin: "org.jetbrains.kotlin.plugin.lombok"
     apply plugin: 'maven-publish'
 
-    version = "1.0.4"
+    version = "1.0.5"
 
     compileJava {
         sourceCompatibility = '1.8'
