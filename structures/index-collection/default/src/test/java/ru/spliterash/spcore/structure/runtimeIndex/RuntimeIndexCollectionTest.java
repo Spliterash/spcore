@@ -1,7 +1,9 @@
 package ru.spliterash.spcore.structure.runtimeIndex;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.spliterash.spcore.structure.runtimeIndex.defaultCollection.DefaultRuntimeIndexCollection;
@@ -29,17 +31,36 @@ public class RuntimeIndexCollectionTest {
 
         Data data = new Data("1", "1");
 
+        String initKey = "dataInitKey";
+        String initKey2 = "key2Value";
+        Data dataToChange = new Data(initKey, initKey2);
+
         indexCollection.add(data);
+        indexCollection.add(dataToChange);
         indexCollection.add(new Data("1", "2"));
         indexCollection.add(new Data("2", "2"));
 
-        Assertions.assertEquals(3, indexCollection.size());
+        Assertions.assertEquals(4, indexCollection.size());
 
         List<Data> key1Search = indexCollection.findByIndex(KEY_1, "1");
         Assertions.assertEquals(2, key1Search.size());
 
         List<Data> key2Search = indexCollection.findByIndex(KEY_2, "1");
         Assertions.assertEquals(1, key2Search.size());
+
+        // Тесты с dateToChange
+        // Сначала проверим что лежит
+        Assertions.assertNotNull(indexCollection.findByIndexFirst(KEY_1, initKey).orElse(null));
+        String newDataVal = "newValue";
+        dataToChange.key1 = newDataVal;
+        // Сразу не появляется
+        Assertions.assertNull(indexCollection.findByIndexFirst(KEY_1, newDataVal).orElse(null));
+        // Переиндексируем
+        indexCollection.reindexField(dataToChange, KEY_1);
+        // По старому значению найти не можем
+        Assertions.assertNull(indexCollection.findByIndexFirst(KEY_1, initKey).orElse(null));
+        // А по новому можем
+        Assertions.assertNotNull(indexCollection.findByIndexFirst(KEY_1, newDataVal).orElse(null));
 
         indexCollection.remove(data);
 
@@ -49,11 +70,11 @@ public class RuntimeIndexCollectionTest {
 
         ArrayList<Data> copy = new ArrayList<>(indexCollection.toCollection());
 
-        for (Data data1 : copy) {
-            indexCollection.remove(data1);
+        for (Data toRemoveData : copy) {
+            indexCollection.remove(toRemoveData);
         }
 
-        Assertions.assertEquals(0, indexedValue.size());
+        Assertions.assertEquals(0, indexCollection.size());
         for (Map<Object, SPLinkedList<Data>> value : indexedValue.values()) {
             Assertions.assertEquals(0, value.size());
         }
@@ -72,9 +93,11 @@ public class RuntimeIndexCollectionTest {
         }
     }
 
+    @Getter
+    @Setter
     @AllArgsConstructor
     public static class Data {
-        private final String key1;
-        private final String key2;
+        private String key1;
+        private String key2;
     }
 }

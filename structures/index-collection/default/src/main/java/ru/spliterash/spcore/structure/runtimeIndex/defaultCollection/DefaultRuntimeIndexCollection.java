@@ -71,12 +71,15 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
     public void reindexField(T object, E index) {
         List<IndexedValue> indexedFields = indexIndex.get(object);
         // Сначала удалим
+        IndexedValue value = null;
         for (IndexedValue indexedField : indexedFields) {
             if (indexedField.index == index) {
-                removeIndexedValue(indexedField);
+                value = indexedField;
                 break;
             }
         }
+        if (value != null)
+            value.remove();
         // Добавим по новой
         index(object, index);
     }
@@ -90,10 +93,10 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
         SPLinkedList<T> list = fieldMap.computeIfAbsent(fieldValue, o -> new SPLinkedList<>());
         SPLinkedList.LinkedListElement<T> add = list.add(element);
         // Добавляем в массив чтобы чистить удаляемые элементы
-        List<IndexedValue> toRemoveList = indexIndex.computeIfAbsent(element, o -> new ArrayList<>());
-        IndexedValue value = new IndexedValue(fieldValue, index, fieldMap, list, add);
+        List<IndexedValue> indexedValueList = indexIndex.computeIfAbsent(element, o -> new ArrayList<>());
+        IndexedValue value = new IndexedValue(fieldValue, index, indexedValueList, fieldMap, list, add);
 
-        toRemoveList.add(value);
+        indexedValueList.add(value);
     }
 
     @Override
@@ -108,34 +111,15 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
         List<IndexedValue> indexedValues = indexIndex.remove(obj);
 
         if (indexedValues != null) {
-            for (IndexedValue value : indexedValues) {
-                removeIndexedValue(value);
+            for (IndexedValue value : new ArrayList<>(indexedValues)) {
+                value.remove();
             }
-        }
-    }
-
-    private void removeIndexedValue(IndexedValue value) {
-        value.node.remove();
-        if (value.sameValueList.isEmpty()) {
-            value.indexMap.remove(value.value);
-        }
-    }
-
-    private void checkEmptyLists() {
-        for (Iterator<Map<Object, SPLinkedList<T>>> iter = fieldIndex.values().iterator(); iter.hasNext(); ) {
-            Map<Object, SPLinkedList<T>> map = iter.next();
-
-            map.values().removeIf(SPLinkedList::isEmpty);
-
-            if (map.isEmpty())
-                iter.remove();
         }
     }
 
     @Override
     public void remove(Object o) {
         removeIndexes(o);
-        checkEmptyLists();
     }
 
     // Прокся
@@ -174,6 +158,10 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
     private class IndexedValue {
         private final Object value;
         private final E index;
+        /**
+         * Лист в котором лежит этот объедок
+         */
+        private final List<IndexedValue> indexedValues;
 
         private final Map<Object, SPLinkedList<T>> indexMap;
         /**
@@ -181,5 +169,13 @@ public class DefaultRuntimeIndexCollection<T, E extends Enum<E> & RuntimeIndex<T
          */
         private final SPLinkedList<T> sameValueList;
         private final SPLinkedList.LinkedListElement<T> node;
+
+        void remove() {
+            node.remove();
+            indexedValues.remove(this);
+            if (sameValueList.isEmpty()) {
+                indexMap.remove(value);
+            }
+        }
     }
 }
