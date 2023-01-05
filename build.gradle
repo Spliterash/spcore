@@ -67,7 +67,7 @@ allprojects {
                     }*/
             maven {
                 name = "nexus"
-                url = "https://nexus.spliterash.ru/repository/spcore/"
+                url = "https://repo.spliterash.ru/spcore/"
 
 
                 credentials {
