@@ -1,0 +1,3 @@
+publishGradle(
+        jdk: 17
+)
